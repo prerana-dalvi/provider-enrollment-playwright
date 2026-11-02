@@ -25,7 +25,7 @@ projects: [
       use: {
         ...devices['Desktop Chrome'],
         channel: 'chrome',
-        launchOptions: { slowMo: 1000 }, // 1000 ms = 1 second pause per action
+        launchOptions: { slowMo: Number(process.env.SLOWMO ?? 0) }, // 1000 ms = 1 second pause per action
       },
     },
   ],
