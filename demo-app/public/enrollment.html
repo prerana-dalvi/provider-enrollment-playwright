@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Provider Portal - New Enrollment</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header><h1>State Medicaid Provider Portal (Demo)</h1></header>
+  <main>
+    <h2>New Provider Enrollment</h2>
+    <div class="stepper" aria-label="Enrollment progress">
+      <span data-step="1">1. Enrollment Type</span>
+      <span data-step="2">2. Provider Info</span>
+      <span data-step="3">3. Practice Location</span>
+      <span data-step="4">4. Specialty &amp; License</span>
+      <span data-step="5">5. Review &amp; Submit</span>
+    </div>
+    <div id="formError" class="alert hidden" role="alert"></div>
+
+    <!-- STEP 1 -->
+    <section id="step1" class="step">
+      <h3>Enrollment Type</h3>
+      <fieldset class="field" style="border:none;padding:0">
+        <legend style="font-weight:600;font-size:14px">Provider Type</legend>
+        <label class="field inline"><input type="radio" name="providerType" value="Individual" /> Individual</label>
+        <label class="field inline"><input type="radio" name="providerType" value="Group" /> Group</label>
+        <label class="field inline"><input type="radio" name="providerType" value="Facility" /> Facility</label>
+      </fieldset>
+      <div class="field">
+        <label for="program">Medicaid Program</label>
+        <select id="program">
+          <option value="">-- Select --</option>
+          <option>Medicaid Fee-for-Service</option>
+          <option>CHIP</option>
+          <option>Managed Care (Ordering/Referring)</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section id="step2" class="step hidden">
+      <h3>Provider Information</h3>
+      <div class="row">
+        <div class="field"><label for="firstName">First Name</label><input id="firstName" /></div>
+        <div class="field"><label for="lastName">Last Name</label><input id="lastName" /></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="npi">NPI</label><input id="npi" maxlength="10" /><span class="error hidden" id="npiError">Enter a valid 10-digit NPI.</span></div>
+        <div class="field"><label for="taxId">Tax ID (EIN)</label><input id="taxId" placeholder="XX-XXXXXXX" /></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="email">Email</label><input id="email" type="email" /></div>
+        <div class="field"><label for="phone">Phone</label><input id="phone" placeholder="(512) 555-0100" /></div>
+      </div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section id="step3" class="step hidden">
+      <h3>Practice Location</h3>
+      <div class="field"><label for="address1">Street Address</label><input id="address1" /></div>
+      <div class="row">
+        <div class="field"><label for="city">City</label><input id="city" /></div>
+        <div class="field">
+          <label for="state">State</label>
+          <select id="state"><option value="">--</option><option>TX</option><option>GA</option><option>VA</option><option>MD</option><option>WA</option></select>
+        </div>
+        <div class="field"><label for="zip">ZIP Code</label><input id="zip" maxlength="5" /></div>
+      </div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section id="step4" class="step hidden">
+      <h3>Specialty &amp; License</h3>
+      <div class="field">
+        <label for="taxonomy">Taxonomy / Specialty</label>
+        <select id="taxonomy">
+          <option value="">-- Select --</option>
+          <option value="207Q00000X">207Q00000X - Family Medicine</option>
+          <option value="208000000X">208000000X - Pediatrics</option>
+          <option value="207R00000X">207R00000X - Internal Medicine</option>
+          <option value="363L00000X">363L00000X - Nurse Practitioner</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="field"><label for="licenseNumber">License Number</label><input id="licenseNumber" /></div>
+        <div class="field">
+          <label for="licenseState">License State</label>
+          <select id="licenseState"><option value="">--</option><option>TX</option><option>GA</option><option>VA</option><option>MD</option><option>WA</option></select>
+        </div>
+        <div class="field"><label for="licenseExpiration">License Expiration</label><input id="licenseExpiration" type="date" /></div>
+      </div>
+    </section>
+
+    <!-- STEP 5 -->
+    <section id="step5" class="step hidden">
+      <h3>Review &amp; Submit</h3>
+      <table id="reviewTable" aria-label="Enrollment summary"><tbody></tbody></table>
+      <label class="field inline" style="margin-top:16px">
+        <input type="checkbox" id="attest" />
+        I attest that the information provided is true, accurate and complete.
+      </label>
+    </section>
+
+    <!-- CONFIRMATION -->
+    <section id="confirmation" class="hidden">
+      <div class="success" role="status">
+        <h3 style="margin-top:0">Enrollment Application Submitted</h3>
+        <p>Application Tracking Number: <strong id="atn"></strong></p>
+        <p>Status: <strong id="appStatus">Pending Review</strong></p>
+        <p>Provider: <strong id="confName"></strong> (NPI <span id="confNpi"></span>)</p>
+      </div>
+      <div class="actions"><button id="backToDashboard">Return to Dashboard</button></div>
+    </section>
+
+    <div class="actions" id="navButtons">
+      <button class="secondary" id="backBtn">Back</button>
+      <button id="nextBtn">Next</button>
+      <button id="submitBtn" class="hidden">Submit Application</button>
+    </div>
+  </main>
+
+  <script>
+    if (!sessionStorage.getItem('user')) location.href = '/login.html';
+    const $ = (id) => document.getElementById(id);
+    let step = 1;
+
+    // NPI check digit validation (Luhn with 80840 prefix, per CMS)
+    function isValidNpi(npi) {
+      if (!/^\d{10}$/.test(npi)) return false;
+      let sum = 24;
+      const base = npi.slice(0, 9).split('').map(Number).reverse();
+      base.forEach((d, i) => { if (i % 2 === 0) { d *= 2; if (d > 9) d -= 9; } sum += d; });
+      return (10 - (sum % 10)) % 10 === Number(npi[9]);
+    }
+
+    const rules = {
+      1: () => {
+        const e = [];
+        if (!document.querySelector('input[name=providerType]:checked')) e.push('Provider Type is required.');
+        if (!$('program').value) e.push('Medicaid Program is required.');
+        return e;
+      },
+      2: () => {
+        const e = [];
+        if (!$('firstName').value.trim()) e.push('First Name is required.');
+        if (!$('lastName').value.trim()) e.push('Last Name is required.');
+        const npiOk = isValidNpi($('npi').value.trim());
+        $('npiError').classList.toggle('hidden', npiOk);
+        if (!npiOk) e.push('NPI is invalid.');
+        if (!/^\d{2}-\d{7}$/.test($('taxId').value.trim())) e.push('Tax ID must be in XX-XXXXXXX format.');
+        if (!/^\S+@\S+\.\S+$/.test($('email').value.trim())) e.push('Email is invalid.');
+        if ($('phone').value.replace(/\D/g, '').length !== 10) e.push('Phone must have 10 digits.');
+        return e;
+      },
+      3: () => {
+        const e = [];
+        if (!$('address1').value.trim()) e.push('Street Address is required.');
+        if (!$('city').value.trim()) e.push('City is required.');
+        if (!$('state').value) e.push('State is required.');
+        if (!/^\d{5}$/.test($('zip').value.trim())) e.push('ZIP Code must be 5 digits.');
+        return e;
+      },
+      4: () => {
+        const e = [];
+        if (!$('taxonomy').value) e.push('Taxonomy is required.');
+        if (!$('licenseNumber').value.trim()) e.push('License Number is required.');
+        if (!$('licenseState').value) e.push('License State is required.');
+        const exp = $('licenseExpiration').value;
+        if (!exp || new Date(exp) <= new Date()) e.push('License Expiration must be a future date.');
+        return e;
+      },
+      5: () => ($('attest').checked ? [] : ['You must accept the attestation.']),
+    };
+
+    function render() {
+      document.querySelectorAll('.step').forEach((s) => s.classList.add('hidden'));
+      $('step' + step).classList.remove('hidden');
+      document.querySelectorAll('.stepper span').forEach((s) => s.classList.toggle('active', Number(s.dataset.step) === step));
+      $('backBtn').style.visibility = step === 1 ? 'hidden' : 'visible';
+      $('nextBtn').classList.toggle('hidden', step === 5);
+      $('submitBtn').classList.toggle('hidden', step !== 5);
+      if (step === 5) buildReview();
+    }
+
+    function showErrors(errors) {
+      $('formError').innerHTML = errors.join('<br>');
+      $('formError').classList.toggle('hidden', errors.length === 0);
+      return errors.length === 0;
+    }
+
+    function collect() {
+      return {
+        'Provider Type': document.querySelector('input[name=providerType]:checked').value,
+        'Medicaid Program': $('program').value,
+        'Provider Name': `${$('firstName').value.trim()} ${$('lastName').value.trim()}`,
+        'NPI': $('npi').value.trim(),
+        'Tax ID': $('taxId').value.trim(),
+        'Email': $('email').value.trim(),
+        'Phone': $('phone').value.trim(),
+        'Practice Address': `${$('address1').value.trim()}, ${$('city').value.trim()}, ${$('state').value} ${$('zip').value.trim()}`,
+        'Taxonomy': $('taxonomy').value,
+        'License': `${$('licenseNumber').value.trim()} (${$('licenseState').value}) exp ${$('licenseExpiration').value}`,
+      };
+    }
+
+    function buildReview() {
+      const body = $('reviewTable').querySelector('tbody');
+      body.innerHTML = '';
+      Object.entries(collect()).forEach(([k, v]) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td></td><td></td>`;
+        tr.children[0].textContent = k;
+        tr.children[1].textContent = v;
+        body.appendChild(tr);
+      });
+    }
+
+    $('nextBtn').onclick = () => { if (showErrors(rules[step]())) { step++; render(); } };
+    $('backBtn').onclick = () => { showErrors([]); step--; render(); };
+    $('submitBtn').onclick = () => {
+      if (!showErrors(rules[5]())) return;
+      const data = collect();
+      const atn = 'ATN' + new Date().getFullYear() + String(Math.floor(Math.random() * 1e6)).padStart(6, '0');
+      setTimeout(() => { // simulate server round-trip
+        document.querySelectorAll('.step, .stepper, #navButtons').forEach((el) => el.classList.add('hidden'));
+        $('atn').textContent = atn;
+        $('confName').textContent = data['Provider Name'];
+        $('confNpi').textContent = data['NPI'];
+        $('confirmation').classList.remove('hidden');
+      }, 600);
+    };
+    $('backToDashboard').onclick = () => (location.href = '/dashboard.html');
+    render();
+  </script>
+</body>
+</html>

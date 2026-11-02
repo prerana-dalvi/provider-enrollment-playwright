@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Provider Portal - Dashboard</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>State Medicaid Provider Portal (Demo)</h1>
+    <button id="logout">Sign Out</button>
+  </header>
+  <main>
+    <h2>Welcome, <span id="welcomeUser"></span></h2>
+    <p>Select an action to continue.</p>
+    <button id="newEnrollment">Enroll New Provider</button>
+  </main>
+  <script>
+    const user = sessionStorage.getItem('user');
+    if (!user) location.href = '/login.html';
+    document.getElementById('welcomeUser').textContent = user;
+    document.getElementById('newEnrollment').onclick = () => (location.href = '/enrollment.html');
+    document.getElementById('logout').onclick = () => { sessionStorage.clear(); location.href = '/login.html'; };
+  </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "credentials": {
+    "username": "provider.admin",
+    "password": "Welcome@123"
+  },
+  "individualProvider": {
+    "providerType": "Individual",
+    "program": "Medicaid Fee-for-Service",
+    "firstName": "Anita",
+    "lastName": "Sharma",
+    "taxId": "74-1234567",
+    "email": "anita.sharma@example.com",
+    "phone": "(512) 555-0142",
+    "address1": "12500 Research Blvd",
+    "city": "Austin",
+    "state": "TX",
+    "zip": "78759",
+    "taxonomy": "207Q00000X",
+    "licenseNumber": "TX-M45821",
+    "licenseState": "TX"
+  }
+}
